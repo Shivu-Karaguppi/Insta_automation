@@ -1,0 +1,56 @@
+from sqlite3 import Cursor
+from databricks import sql
+import pyodbc
+import os
+import pandas as pd
+import warnings
+from datetime import datetime
+
+result1 = pd.DataFrame()
+result_mst_coxn=[]
+# outputs_of_mst=pd.DataFrame()
+dfr=pd.DataFrame()
+customers=[2,22,30,14,38,36]
+cust_num=[]
+tab_name=[]
+src_result=[]
+target_result=[]
+df2=[]
+
+
+
+def databricks():
+   host="bolt-analyticsprod.cloud.databricks.com"
+   http_path="sql/protocolv1/o/3158924937735331/0425-072240-ijw0rg8h"
+   access_token="dapicdda059cc93ed957a0f4670e651e12c4"#abdul_access_token
+
+   connection = sql.connect(
+    server_hostname=host,
+    http_path=http_path,
+    access_token=access_token)
+   return connection
+
+def mst_coxn():
+  connection=databricks()
+  cursor=connection.cursor()
+  df_objName=pd.read_sql('select target_table,customer_id,target_dt_created,target_dt_updated from adp_core.mst.mst_ods_customer_object_config where customer_id in (2,22,30,14,38,36) and target_dt_created is not null and target_dt_updated is not null',connection)
+  print(df_objName)
+  for x in range(len(df_objName)):
+        target_dt_created=df_objName.loc[x,'target_dt_created']
+        target_dt_updated=df_objName.loc[x,'target_dt_updated']
+        cust=df_objName.loc[x,'customer_id']
+        table=df_objName.loc[x,'target_table']
+        try:
+          cursor.execute(f'select max({target_dt_created}),min({target_dt_created}) from adp_core.dl{cust}.{table}')
+          df3=cursor.fetchall()
+        #   print(cust,table)
+          df2.append(df3)
+          df2[x].append(table)
+          df2[x].append(cust)
+        except Exception as e:
+          print(e)
+        # print(df2)
+  data_convert= [row[0] for row in df2]  
+  outputs_of_mst = pd.DataFrame(df2)   
+  print(outputs_of_mst)
+mst_coxn()
